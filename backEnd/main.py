@@ -2,7 +2,7 @@ import os
 import redis
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from database import EcoStreamRepository
+from database import EcoStreamRepository, get_db_connection
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -37,10 +37,8 @@ async def registrar_medicion(data: MedicionIn):
 async def obtener_dashboard():
     try:
         dashboard_data = []
-        
         for codigo in CODIGOS_SENSORES:
             sensor_data = r.hgetall(f"sensor:{codigo}")
-            
             if sensor_data:
                 dashboard_data.append(sensor_data)
             else:
@@ -48,7 +46,32 @@ async def obtener_dashboard():
                     "codigo_sensor": codigo,
                     "valor": "Esperando datos..."
                 })
-                
         return dashboard_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al leer la caché de Redis: {str(e)}")
+
+@app.get("/api/alertas")
+async def obtener_alertas_recientes():
+    query = """
+        SELECT a.id, s.codigo_sensor, a.valor_disparado, a.descripcion, a.fecha_alerta 
+        FROM alertas a
+        JOIN sensores s ON a.sensor_id = s.id
+        ORDER BY a.fecha_alerta DESC LIMIT 10;
+    """
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(query)
+                filas = cursor.fetchall()
+                
+                return [
+                    {
+                        "id": f["id"],
+                        "codigo_sensor": f["codigo_sensor"],
+                        "valor": float(f["valor_disparado"]),
+                        "descripcion": f["descripcion"],
+                        "fecha": f["fecha_alerta"].strftime("%Y-%m-%d %H:%M:%S")
+                    } for f in filas
+                ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener alertas: {str(e)}")

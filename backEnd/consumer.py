@@ -16,7 +16,11 @@ r = redis.Redis(
     decode_responses=True
 )
 
-print("📥 Iniciando Consumidor EcoStream con soporte para Redis...")
+UMBRALES = {
+    "CO2": 450.0,
+    "RUIDO": 75.0,
+    "TRAFICO": 35.0
+}
 
 try:
     consumer = KafkaConsumer(
@@ -26,7 +30,7 @@ try:
         enable_auto_commit=True,
         value_deserializer=lambda x: json.loads(x.decode('utf-8'))
     )
-    print(f"🎧 Escuchando eventos y actualizando caché en tiempo real...")
+    print(f"🎧 Escuchando eventos y gestionando alertas en tiempo real...")
 except Exception as e:
     print(f"❌ Error al conectar con Kafka: {e}")
     exit(1)
@@ -42,22 +46,33 @@ try:
         try:
             redis_key = f"sensor:{codigo_sensor}"
             r.hset(redis_key, mapping={
-                "valor": valor,
+                "valor": valor, 
                 "codigo_sensor": codigo_sensor
             })
             print(f"⚡ [Redis] Caché actualizada para {codigo_sensor}")
-
+            
             sensor_id = EcoStreamRepository.obtener_sensor_id(codigo_sensor)
             if sensor_id:
                 nuevo_registro = EcoStreamRepository.insertar_medicion(sensor_id, valor)
                 print(f"💾 [PostgreSQL] Histórico guardado. ID: {nuevo_registro['id']}")
+                
+                tipo_sensor = codigo_sensor.split("-")[-1] 
+                
+                if tipo_sensor in UMBRALES and valor > UMBRALES[tipo_sensor]:
+                    zona = codigo_sensor.split("-")[1]
+                    descripcion_alerta = f"Alerta de {tipo_sensor} detectada en zona {zona}. Límite seguro superado."
+
+                    nueva_alerta = EcoStreamRepository.insertar_alerta(sensor_id, valor, descripcion_alerta)
+                    print(f"🚨 [ALERTA CRÍTICA] {descripcion_alerta} | Valor: {valor} | ID Alerta: {nueva_alerta['id']}")
             
         except Exception as err:
-            print(f"❌ Error al procesar datos: {err}")
+            print(f"❌ Error al procesar datos del evento: {err}")
             
-        print("." * 30)
+        print("." * 40)
 
 except KeyboardInterrupt:
-    print("\n🛑 Consumidor detenido.")
+    print("\n🛑 Consumidor detenido manualmente por el usuario.")
 finally:
-    consumer.close()
+    if 'consumer' in locals():
+        consumer.close()
+        print("🔌 Conexión con Kafka cerrada limpiamente.")

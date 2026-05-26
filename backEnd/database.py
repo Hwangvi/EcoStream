@@ -51,3 +51,19 @@ class EcoStreamRepository:
                     WHERE m.fecha_registro IN (SELECT MAX(fecha_registro) FROM mediciones GROUP BY sensor_id);
                 """)
                 return cursor.fetchall()
+    
+    @staticmethod
+    def insertar_alerta(sensor_id: int, valor: float, descripcion: str):
+        query = """
+            INSERT INTO alertas (sensor_id, valor_disparado, descripcion)
+            VALUES (%s, %s, %s) RETURNING id, fecha_alerta;
+        """
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(query, (sensor_id, valor, descripcion))
+                result = cursor.fetchone()
+                conn.commit()
+                return {
+                    "id": result['id'], 
+                    "fecha_alerta": result['fecha_alerta']
+                }

@@ -19,6 +19,14 @@ CREATE TABLE mediciones (
     fecha_registro TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS alertas (
+    id SERIAL PRIMARY KEY,
+    sensor_id INT REFERENCES sensores(id) ON DELETE CASCADE,
+    valor_disparado DECIMAL(10, 2) NOT NULL,
+    descripcion VARCHAR(255) NOT NULL,
+    fecha_alerta TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 INSERT INTO barrios (nombre, coordenadas_centroide) VALUES 
 ('Centro', '40.417,-3.703'),
 ('Norte', '40.480,-3.680'),
