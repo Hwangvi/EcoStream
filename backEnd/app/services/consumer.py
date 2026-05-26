@@ -1,9 +1,12 @@
 import os
+import sys
 import json
 import redis
 from kafka import KafkaConsumer
-from database import EcoStreamRepository
 from dotenv import load_dotenv
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+from app.database.database import EcoStreamRepository
 
 load_dotenv()
 
@@ -47,7 +50,8 @@ try:
             redis_key = f"sensor:{codigo_sensor}"
             r.hset(redis_key, mapping={
                 "valor": valor, 
-                "codigo_sensor": codigo_sensor
+                "codigo_sensor": codigo_sensor,
+                "unidad_medida": "ppm" if "CO2" in codigo_sensor else "dB" if "RUIDO" in codigo_sensor else "vehiculos/min"
             })
             print(f"⚡ [Redis] Caché actualizada para {codigo_sensor}")
             

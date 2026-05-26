@@ -1,9 +1,13 @@
 import time
 import random
 import json
+import os
 from kafka import KafkaProducer
+from dotenv import load_dotenv
 
-KAFKA_SERVER = 'localhost:9092'
+load_dotenv()
+
+KAFKA_SERVER = os.getenv('KAFKA_SERVER', 'localhost:9092')
 TOPIC_NAME = 'telemetria-sensores'
 
 try:

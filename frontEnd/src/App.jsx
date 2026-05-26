@@ -1,121 +1,155 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState, useEffect } from 'react'
+import TarjetaSensor from './components/TarjetaSensor'
+import ListaAlertas from './components/ListaAlertas'
+import GraficoSensores from './components/GraficoSensores'
+import AgenteIA from './components/AgenteIA'
+import ExportadorExcel from './components/ExportadorExcel'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [sensores, setSensores] = useState([])
+  const [alertas, setAlertas] = useState([])
+  const [zonaSeleccionada, setZonaSeleccionada] = useState('TODAS')
+  const [filtrarAlertasPorZona, setFiltrarAlertasPorZona] = useState(false)
+  const [errorApi, setErrorApi] = useState(false)
+
+  useEffect(() => {
+    const consultarBackend = async () => {
+      try {
+        const [resDashboard, resAlertas] = await Promise.all([
+          fetch('http://127.0.0.1:8000/api/dashboard'),
+          fetch('http://127.0.0.1:8000/api/alertas')
+        ])
+
+        if (!resDashboard.ok || !resAlertas.ok) throw new Error('Error de conexión')
+
+        const datosDashboard = await resDashboard.json()
+        const datosAlertas = await resAlertas.json()
+
+        setSensores(datosDashboard)
+        setAlertas(datosAlertas)
+        setErrorApi(false)
+      } catch (err) {
+        console.error("Error en sincronización:", err)
+        setErrorApi(true)
+      }
+    }
+
+    consultarBackend()
+    const intervalo = setInterval(consultarBackend, 2000)
+    return () => clearInterval(intervalo)
+  }, [])
+
+  const sensoresFiltrados = sensores.filter(sensor => {
+    if (zonaSeleccionada === 'TODAS') return true
+    return sensor.codigo_sensor.includes(`-${zonaSeleccionada}-`)
+  })
+
+  const alertasFiltradas = alertas.filter(alerta => {
+    if (!filtrarAlertasPorZona || zonaSeleccionada === 'TODAS') return true
+    return alerta.codigo_sensor.includes(`-${zonaSeleccionada}-`)
+  })
+
+  const tieneAlertaCentro = alertas.some(a => a.codigo_sensor.includes("CENTRO"))
+  const tieneAlertaSur = alertas.some(a => a.codigo_sensor.includes("SUR"))
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="flex min-h-screen flex-col bg-[#0b0f19] text-slate-200 antialiased font-sans">
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+      <header className="border-b border-slate-800/80 bg-[#0b0f19]/70 backdrop-blur-md py-4 px-6 sm:px-10">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <h1 className="text-sm font-medium tracking-tight text-white font-mono">
+            ECOSTREAM <span className="text-slate-500 font-light text-xs ml-1">/ ANALYTICS ENGINE</span>
+          </h1>
+          <div className="flex items-center gap-2 rounded border border-slate-800 bg-slate-900/20 px-2.5 py-0.5 font-mono text-[10px] text-slate-400">
+            <span className={`h-1 w-1 rounded-full ${errorApi ? 'bg-red-500' : 'bg-emerald-500 animate-pulse'}`}></span>
+            {errorApi ? 'NETWORK ERROR' : 'FEED SYNCHRONIZED'}
+          </div>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      </header>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      <main className="flex-1 p-6 sm:p-10 max-w-7xl mx-auto w-full space-y-8">
+        
+        {errorApi ? (
+          <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-5 text-center text-xs text-red-400 font-mono">
+            Error de enlace: Reconectando con la API de control urbano...
+          </div>
+        ) : (
+          <div className="space-y-8">
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/60 pb-5">
+              <div>
+                <h2 className="text-base font-normal text-white tracking-tight">Consola de Mando Territorial</h2>
+                <p className="text-xs text-slate-500 font-mono mt-0.5">Segmentación operativa por cuadrantes urbanos</p>
+              </div>
+              
+              <div className="flex rounded-lg bg-slate-900/60 p-1 border border-slate-800/80 self-start sm:self-auto">
+                {['TODAS', 'CENTRO', 'NORTE', 'SUR'].map((zona) => {
+                  const activa = zonaSeleccionada === zona
+                  const alerta = (zona === 'CENTRO' && tieneAlertaCentro) || (zona === 'SUR' && tieneAlertaSur)
+                  return (
+                    <button
+                      key={zona}
+                      onClick={() => setZonaSeleccionada(zona)}
+                      className={`relative rounded-md px-4 py-1.5 font-mono text-xs font-medium transition-all duration-150 flex items-center gap-1.5 cursor-pointer
+                        ${activa ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                    >
+                      {zona === 'TODAS' ? 'ÁREA GLOBAL' : `ZONA ${zona}`}
+                      {alerta && <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse"></span>}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+              
+              <div className="lg:col-span-2 space-y-8">
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {sensoresFiltrados.map((sensor, index) => (
+                    <TarjetaSensor key={sensor.codigo_sensor || index} sensor={sensor} />
+                  ))}
+                </div>
+
+                <GraficoSensores datos={sensoresFiltrados} />
+
+                <AgenteIA zonaActual={zonaSeleccionada} />
+
+              </div>
+
+              <div className="lg:col-span-1 space-y-4">
+
+                <ExportadorExcel />
+
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wider font-mono">Incidentes Recientes</h3>
+                    
+                    {zonaSeleccionada !== 'TODAS' && (
+                      <select
+                        value={filtrarAlertasPorZona ? 'ZONA' : 'TODAS'}
+                        onChange={(e) => setFiltrarAlertasPorZona(e.target.value === 'ZONA')}
+                        className="rounded border border-slate-800 bg-slate-950 px-2 py-0.5 font-mono text-[10px] text-slate-400 focus:outline-none cursor-pointer"
+                      >
+                        <option value="TODAS">Ver Todas</option>
+                        <option value="ZONA">Solo Zona {zonaSeleccionada}</option>
+                      </select>
+                    )}
+                  </div>
+                </div>
+
+                <ListaAlertas alertas={alertasFiltradas} />
+              </div>
+
+            </div>
+          </div>
+        )}
+      </main>
+
+      <footer className="border-t border-slate-900/60 py-5 text-center text-[10px] text-slate-600 font-mono tracking-tight">
+        EcoStream Control System: Desarrollado con React, Python & PostgreSQL 
+      </footer>
+    </div>
   )
 }
 
