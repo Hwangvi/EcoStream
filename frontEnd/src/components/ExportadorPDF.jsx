@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-function ExportadorExcel() {
+function ExportadorPDF() { 
   const [rango, setRango] = useState('dia')
   const [exportando, setExportando] = useState(false)
 
@@ -15,13 +15,14 @@ function ExportadorExcel() {
       const blob = await respuesta.blob()
       const enlaceDescarga = document.createElement('a')
       enlaceDescarga.href = window.URL.createObjectURL(blob)
-      enlaceDescarga.download = `EcoStream_Reporte_${rango}.csv`
+      
+      enlaceDescarga.download = `EcoStream_Reporte_${rango}.pdf` 
       document.body.appendChild(enlaceDescarga)
       enlaceDescarga.click()
       enlaceDescarga.remove()
     } catch (error) {
       console.error("Error al exportar los logs:", error)
-      alert("No se pudo compilar el archivo Excel en este momento.")
+      alert("No se pudo compilar el archivo PDF en este momento.")
     } finally {
       setExportando(false)
     }
@@ -31,9 +32,9 @@ function ExportadorExcel() {
     <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-5 space-y-4">
       <div>
         <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wider font-mono">
-          Exportación de Datos Críticos
+          Exportación de Auditoría
         </h3>
-        <p className="text-[11px] text-slate-500 font-mono mt-0.5">Compilación de auditorías territoriales</p>
+        <p className="text-[11px] text-slate-500 font-mono mt-0.5">Reporte técnico en formato PDF</p>
       </div>
 
       <div className="flex gap-2">
@@ -50,13 +51,13 @@ function ExportadorExcel() {
         <button
           onClick={manejarDescarga}
           disabled={exportando}
-          className="rounded bg-emerald-500 px-4 py-1.5 font-mono text-xs font-bold text-slate-950 hover:bg-emerald-400 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap"
+          className="rounded bg-indigo-500 px-4 py-1.5 font-mono text-xs font-bold text-slate-950 hover:bg-indigo-400 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap"
         >
-          {exportando ? '📊 Generando...' : '📥 Descargar .CSV'}
+          {exportando ? '📊 Generando...' : '📥 Descargar .PDF'}
         </button>
       </div>
     </div>
   )
 }
 
-export default ExportadorExcel
+export default ExportadorPDF

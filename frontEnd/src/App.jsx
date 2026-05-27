@@ -3,7 +3,7 @@ import TarjetaSensor from './components/TarjetaSensor'
 import ListaAlertas from './components/ListaAlertas'
 import GraficoSensores from './components/GraficoSensores'
 import AgenteIA from './components/AgenteIA'
-import ExportadorExcel from './components/ExportadorExcel'
+import ExportadorPDF from './components/ExportadorPDF'
 
 function App() {
   const [sensores, setSensores] = useState([])
@@ -57,9 +57,18 @@ function App() {
 
       <header className="border-b border-slate-800/80 bg-[#0b0f19]/70 backdrop-blur-md py-4 px-6 sm:px-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <h1 className="text-sm font-medium tracking-tight text-white font-mono">
-            ECOSTREAM <span className="text-slate-500 font-light text-xs ml-1">/ ANALYTICS ENGINE</span>
-          </h1>
+          
+          <div className="flex items-center gap-3">
+            <img 
+              src="/logo.png" 
+              alt="EcoStream Logo" 
+              className="h-20 w-auto brightness-200"
+            />
+            <h1 className="text-base font-medium tracking-tight text-white font-mono">
+              ECOSTREAM <span className="text-slate-500 font-light text-xs ml-1">/ ANALYTICS ENGINE</span>
+            </h1>
+          </div>
+
           <div className="flex items-center gap-2 rounded border border-slate-800 bg-slate-900/20 px-2.5 py-0.5 font-mono text-[10px] text-slate-400">
             <span className={`h-1 w-1 rounded-full ${errorApi ? 'bg-red-500' : 'bg-emerald-500 animate-pulse'}`}></span>
             {errorApi ? 'NETWORK ERROR' : 'FEED SYNCHRONIZED'}
@@ -119,7 +128,7 @@ function App() {
 
               <div className="lg:col-span-1 space-y-4">
 
-                <ExportadorExcel />
+                <ExportadorPDF/>
 
                 <div className="flex flex-col gap-2.5">
                   <div className="flex items-center justify-between">
