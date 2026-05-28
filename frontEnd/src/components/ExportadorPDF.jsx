@@ -1,32 +1,50 @@
 import { useState } from 'react'
 
 function ExportadorPDF() { 
-  const [rango, setRango] = useState('dia')
+  const [rangoMinutos, setRangoMinutos] = useState('60')
   const [exportando, setExportando] = useState(false)
 
-  const manejarDescarga = async () => {
-    setExportando(true)
+
+const manejarDescarga = async () => {
+  setExportando(true);
+  try {
+    const url = `${import.meta.env.VITE_API_URL}/api/alertas/exportar`;
+    const respuesta = await fetch(url);
+    
+    const respuestaClon = respuesta.clone();
+    
+    let datos;
     try {
-      const url = `http://127.0.0.1:8000/api/alertas/exportar?rango=${rango}`
-      
-      const respuesta = await fetch(url)
-      if (!respuesta.ok) throw new Error("Fallo en la descarga")
-      
-      const blob = await respuesta.blob()
-      const enlaceDescarga = document.createElement('a')
-      enlaceDescarga.href = window.URL.createObjectURL(blob)
-      
-      enlaceDescarga.download = `EcoStream_Reporte_${rango}.pdf` 
-      document.body.appendChild(enlaceDescarga)
-      enlaceDescarga.click()
-      enlaceDescarga.remove()
-    } catch (error) {
-      console.error("Error al exportar los logs:", error)
-      alert("No se pudo compilar el archivo PDF en este momento.")
-    } finally {
-      setExportando(false)
+      datos = await respuestaClon.json();
+    } catch (_e) {
+      datos = null;
     }
+
+    if (datos && datos.status === "error") {
+      alert(datos.message);
+      return;
+    }
+
+    if (!respuesta.ok) {
+      throw new Error("Fallo en la descarga");
+    }
+    
+    const blob = await respuesta.blob();
+    const enlaceDescarga = document.createElement('a');
+    enlaceDescarga.href = window.URL.createObjectURL(blob);
+    
+    enlaceDescarga.download = "Reporte_EcoStream_100_Recientes.pdf";
+    document.body.appendChild(enlaceDescarga);
+    enlaceDescarga.click();
+    enlaceDescarga.remove();
+    
+  } catch (error) {
+    console.error("Error al exportar los logs:", error);
+    alert("No se pudo compilar el archivo PDF. Asegúrate de que el servidor esté activo.");
+  } finally {
+    setExportando(false);
   }
+};
 
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-5 space-y-4">
@@ -34,29 +52,18 @@ function ExportadorPDF() {
         <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wider font-mono">
           Exportación de Auditoría
         </h3>
-        <p className="text-[11px] text-slate-500 font-mono mt-0.5">Reporte técnico en formato PDF</p>
+        <p className="text-[11px] text-slate-500 font-mono mt-0.5">Descargar reporte técnico de las últimas 100 entradas</p>
       </div>
-
-      <div className="flex gap-2">
-        <select
-          value={rango}
-          onChange={(e) => setRango(e.target.value)}
-          className="flex-1 rounded border border-slate-800 bg-slate-950 px-3 py-1.5 font-mono text-xs text-slate-300 focus:outline-none cursor-pointer"
-        >
-          <option value="dia">Últimas 24 Horas</option>
-          <option value="semana">Últimos 7 Días</option>
-          <option value="mes">Últimos 30 Días</option>
-        </select>
 
         <button
           onClick={manejarDescarga}
           disabled={exportando}
           className="rounded bg-indigo-500 px-4 py-1.5 font-mono text-xs font-bold text-slate-950 hover:bg-indigo-400 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap"
         >
-          {exportando ? '📊 Generando...' : '📥 Descargar .PDF'}
+          {exportando ? '📊 Generando...' : '📥 Descargar Reporte (100 últimos registros)'}
         </button>
       </div>
-    </div>
+
   )
 }
 

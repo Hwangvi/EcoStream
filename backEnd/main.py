@@ -1,6 +1,7 @@
 import os
 import io
 import json
+from app.utils.kafka_helper import crear_productor
 from reportlab.lib.pagesizes import letter, landscape
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
@@ -16,17 +17,30 @@ from fastapi.responses import StreamingResponse
 from openai import OpenAI
 from dotenv import load_dotenv
 from app.database.database import EcoStreamRepository, get_db_connection
-
-import openpyxl
+from contextlib import asynccontextmanager
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
+from config import configurar_cors
 
 load_dotenv()
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("🧹 Ejecutando limpieza inicial de la base de datos...")
+    try:
+        EcoStreamRepository.purgar_datos_antiguos()
+        print("✅ Sistema listo y saneado.")
+    except Exception as e:
+        print(f"⚠️ Error al limpiar en el inicio: {e}")
+    yield
+    print("🔌 Apagando EcoStream Engine...")
+
 app = FastAPI(
     title="EcoStream Analytics Engine",
-    description="Core analítico de telemetría urbana y auditoría con IA"
+    description="Core analítico de telemetría urbana y auditoría con IA",
+    lifespan=lifespan
 )
+configurar_cors(app)
 
 origins = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",")
 app.add_middleware(
@@ -41,51 +55,98 @@ class PeticionAnalisis(BaseModel):
     zona: str
 
 @app.get("/api/alertas/exportar")
-async def exportar_registro_pdf(rango: str = "dia"):
-    ahora = datetime.now()
-    fecha_limite = ahora - timedelta(days=1)
-    if rango == "semana": fecha_limite = ahora - timedelta(days=7)
-    elif rango == "mes": fecha_limite = ahora - timedelta(days=30)
+async def exportar_registro_pdf():
+    try:
+        filas = EcoStreamRepository.obtener_ultimas_100_filas()
 
-    filas = EcoStreamRepository.exportar_alertas_por_fecha(fecha_limite)
+        if not filas:
+            return {"status": "error", "message": "No se encontraron registros en este rango de tiempo."}
+        
+        if len(filas) > 500:
+            filas = filas[:500]
+            
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=landscape(letter),title="Reporte de Auditoría - EcoStream",
+    author="HwangVi",
+    subject="Reporte técnico de alertas y mediciones")
+        elements = []
+        styles = getSampleStyleSheet()
+
+        elements.append(Paragraph("Reporte de Auditoría: Últimos 100 registros", styles['Title']))
+        elements.append(Spacer(1, 12))
+
+        data = [["Tipo", "Sensor", "Valor", "Descripción", "Fecha/Hora"]]
+        
+        for f in filas:
+            tipo = f.get('tipo') or 'Desconocido'
+            codigo = f.get('codigo_sensor') or 'S/C'
+            valor = f.get('valor') or 0.0
+            desc = f.get('descripcion') or 'Sin descripción'
+            fecha = str(f.get('fecha_evento'))[:16] if f.get('fecha_evento') else "N/A"
+            
+            es_alerta = tipo == 'ALERTA'
+            color_texto = colors.red if es_alerta else colors.black
+
+            fila = [
+                tipo,
+                Paragraph(f"<font color='{color_texto}'>{codigo}</font>", styles['Normal']),
+                Paragraph(f"<font color='{color_texto}'>{str(round(float(valor), 2))}</font>", styles['Normal']),
+                Paragraph(f"<font color='{color_texto}'>{desc}</font>", styles['Normal']),
+                fecha
+            ]
+            data.append(fila)
+
+        table = Table(data, colWidths=[60, 100, 60, 250, 100])
+        table.setStyle(TableStyle([
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1E293B")),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ]))
+        
+        elements.append(table)
+        doc.build(elements)
+        
+        buffer.seek(0)
+        return StreamingResponse(
+            buffer, 
+            media_type="application/pdf", 
+            headers={"Content-Disposition": "attachment; filename=Reporte_EcoStream.pdf"}
+        )
+    except Exception as e:
+        print(f"ERROR CRÍTICO: {e}")
+        raise HTTPException(status_code=500, detail="Error en servidor")
+
+@app.get("/api/alertas/conteo")
+async def contar_alertas(rango: int = 1):
+    count = EcoStreamRepository.contar_alertas(rango)
+    return {"total": count}
+
     
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), rightMargin=20, leftMargin=15, title="Reporte de Auditoría EcoStream",
-    author="EcoStream Analytics Engine")
-    elements = []
-    styles = getSampleStyleSheet()
-
-    elements.append(Paragraph(f"Reporte de Auditoría: {rango.upper()}", styles['Title']))
-    elements.append(Spacer(1, 12))
-
-    data = [["ID", "Sensor", "Valor", "Descrip.", "Fecha"]]
-    for f in filas:
-        desc_paragraph = Paragraph(f['descripcion'], styles['Normal'])
-        data.append([str(f['id']), 
-            f['codigo_sensor'], 
-            str(f['valor_disparado']), 
-            desc_paragraph,
-            str(f['fecha_alerta'])[:16]])
-
-
-    table = Table(data, colWidths=[30, 100, 45, 250, 80])
-    table.setStyle(TableStyle([
-        ('FONTSIZE', (0, 0), (-1, -1), 8),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1E293B")),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('LEFTPADDING', (0, 0), (-1, -1), 4),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-    ]))
-    elements.append(table)
-    doc.build(elements)
+@app.post("/api/alertas/inyectar-anomalia")
+async def inyectar_anomalia(zona: str):
+    payload = {
+        "codigo_sensor": f"SEN-{zona.upper()}-CO2", 
+        "valor": 999.0
+    }
     
-    buffer.seek(0)
-    return StreamingResponse(buffer, media_type="application/pdf", 
-                             headers={"Content-Disposition": f"attachment; filename=Reporte.pdf"})
+    producer = crear_productor()
+    producer.send('telemetria-sensores', value=payload)
+    producer.flush()
+    producer.close()
+    
+    return {"status": "Anomalía inyectada correctamente"}
+
+@app.post("/api/alertas/reset")
+async def reset_alertas():
+    try:
+        EcoStreamRepository.limpiar_alertas()
+        return {"status": "success", "message": "Historial de alertas limpiado"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al limpiar: {str(e)}")
+    
+from app.utils.kafka_helper import crear_productor
+
 @app.post("/api/ia/analizar")
 async def analizar_zona_con_ia(data: PeticionAnalisis):
     try:

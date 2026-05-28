@@ -21,10 +21,10 @@ except Exception as e:
     exit(1)
 
 SENSORES = [
-    {"codigo": "SEN-CENTRO-CO2", "base": 400, "variacion": 50},
-    {"codigo": "SEN-CENTRO-RUIDO", "base": 60, "variacion": 15},
-    {"codigo": "SEN-NORTE-TRAFICO", "base": 20, "variacion": 18},
-    {"codigo": "SEN-SUR-CO2", "base": 420, "variacion": 60}
+    {"codigo": "SEN-CENTRO-CO2", "base": 400, "variacion": 30},
+    {"codigo": "SEN-CENTRO-RUIDO", "base": 60, "variacion": 10},
+    {"codigo": "SEN-NORTE-TRAFICO", "base": 20, "variacion": 10},
+    {"codigo": "SEN-SUR-CO2", "base": 400, "variacion": 30}
 ]
 
 print(f"Simulador EcoStream (PRODUCER) enviando datos al topic '{TOPIC_NAME}' cada 3 segundos...\n")

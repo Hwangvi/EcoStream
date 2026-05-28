@@ -65,7 +65,7 @@ try:
                 if tipo_sensor in UMBRALES and valor > UMBRALES[tipo_sensor]:
                     zona = codigo_sensor.split("-")[1]
                     descripcion_alerta = f"Alerta de {tipo_sensor} detectada en zona {zona}. Límite seguro superado."
-
+                    valor_a_guardar = float(valor)
                     nueva_alerta = EcoStreamRepository.insertar_alerta(sensor_id, valor, descripcion_alerta)
                     print(f"🚨 [ALERTA CRÍTICA] {descripcion_alerta} | Valor: {valor} | ID Alerta: {nueva_alerta['id']}")
             

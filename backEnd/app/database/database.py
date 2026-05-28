@@ -66,20 +66,17 @@ class EcoStreamRepository:
     def insertar_alerta(sensor_id: int, valor: float, descripcion: str):
         query = """
             INSERT INTO alertas (sensor_id, valor_disparado, descripcion)
-            VALUES (%s, %s, %s) RETURNING id, fecha_alerta;
+            VALUES (%s, %s, %s) 
+            RETURNING id, fecha_alerta, valor_disparado;
         """
         with get_db_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(query, (sensor_id, valor, descripcion))
                 result = cursor.fetchone()
                 conn.commit()
-                return {
-                    "id": result['id'], 
-                    "fecha_alerta": result['fecha_alerta']
-                }
+                return result
     @staticmethod
     def obtener_alertas_recientes():
-        """Consulta las últimas 10 alertas críticas en la base de datos."""
         query = """
             SELECT a.id, s.codigo_sensor, a.valor_disparado, a.descripcion, a.fecha_alerta 
             FROM alertas a
@@ -91,11 +88,27 @@ class EcoStreamRepository:
                 cursor.execute(query)
                 return cursor.fetchall()
     @staticmethod
+    def obtener_datos_auditoria_unificados(fecha_inicio):
+        query = """
+        SELECT * FROM (
+            SELECT 'MEDICION' as tipo, m.fecha_registro as fecha_evento, s.codigo_sensor, m.valor::DECIMAL(10,2) as valor, 'Promedio operacional' as descripcion
+            FROM mediciones m JOIN sensores s ON m.sensor_id = s.id
+            UNION ALL
+            SELECT 'ALERTA' as tipo, a.fecha_alerta as fecha_evento, s.codigo_sensor, a.valor_disparado::DECIMAL(10,2) as valor, a.descripcion
+            FROM alertas a JOIN sensores s ON a.sensor_id = s.id
+        ) as union_tabla
+        WHERE fecha_evento >= %s
+        ORDER BY fecha_evento DESC;
+        """
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+    
+                fecha_str = fecha_inicio.isoformat()
+                cursor.execute(query, (fecha_str,)) 
+                return cursor.fetchall()
+    
+    @staticmethod
     def exportar_alertas_por_fecha(fecha_inicio):
-        """
-        Consulta TODAS las alertas críticas desde una fecha específica
-        hasta la actualidad, sin límites, para auditoría externa.
-        """
         query = """
             SELECT a.id, s.codigo_sensor, a.valor_disparado, a.descripcion, a.fecha_alerta 
             FROM alertas a
@@ -106,4 +119,45 @@ class EcoStreamRepository:
         with get_db_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(query, (fecha_inicio,))
+                return cursor.fetchall()
+    @staticmethod
+    def limpiar_alertas():
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("TRUNCATE TABLE alertas RESTART IDENTITY;")
+                conn.commit()
+    
+    @staticmethod
+    def purgar_datos_antiguos():
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("DELETE FROM mediciones WHERE fecha_registro < NOW() - INTERVAL '7 days';")
+                conn.commit()
+    
+
+    @staticmethod
+    def contar_alertas(dias):
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT COUNT(*) FROM alertas WHERE fecha_alerta >= NOW() - INTERVAL '%s days';", 
+                    (dias,)
+                )
+                return cursor.fetchone()[0]
+    @staticmethod
+    def obtener_ultimas_100_filas():
+        query = """
+        SELECT * FROM (
+            SELECT 'MEDICION' as tipo, m.fecha_registro as fecha_evento, s.codigo_sensor, m.valor::DECIMAL(10,2) as valor, 'Promedio operacional' as descripcion
+            FROM mediciones m JOIN sensores s ON m.sensor_id = s.id
+            UNION ALL
+            SELECT 'ALERTA' as tipo, a.fecha_alerta as fecha_evento, s.codigo_sensor, a.valor_disparado::DECIMAL(10,2) as valor, a.descripcion
+            FROM alertas a JOIN sensores s ON a.sensor_id = s.id
+        ) as union_tabla
+        ORDER BY fecha_evento DESC
+        LIMIT 100;
+        """
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(query)
                 return cursor.fetchall()

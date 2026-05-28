@@ -17,5 +17,9 @@ export default defineConfig([
       globals: globals.browser,
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
+    rules: {
+      ...reactHooks.configs.flat.recommended.rules,
+      'no-unused-vars': ['warn', { 'argsIgnorePattern': '^_' }]
+    },
   },
 ])
