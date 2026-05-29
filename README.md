@@ -1,6 +1,7 @@
 # 🏙️ SmartCity Simulator - IoT Monitoring & AI Auditing Platform
 
 [![React](https://img.shields.io/badge/React-18%2B-61DAFB?style=for-the-badge\&logo=react\&logoColor=black)](https://react.dev/)
+[![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge\&logo=tailwind-css\&logoColor=white)](https://tailwindcss.com/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Python-009688?style=for-the-badge\&logo=fastapi\&logoColor=white)](https://fastapi.tiangolo.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?style=for-the-badge\&logo=postgresql\&logoColor=white)](https://www.postgresql.org/)
 [![Apache Kafka](https://img.shields.io/badge/Apache_Kafka-Streaming-231F20?style=for-the-badge\&logo=apachekafka\&logoColor=white)](https://kafka.apache.org/)
@@ -63,7 +64,8 @@ La plataforma incorpora un sistema de auditoría automática basado en inteligen
 
 ## 🖥️ Frontend (Client Dashboard)
 
-* **Framework:** React
+* **Framework:** React + Vite
+* **Estilizado:** Tailwind CSS para un diseño responsivo, modular y de alto rendimiento.
 * **UI Reactiva:** Renderizado dinámico de métricas y componentes en tiempo real.
 * **Gestión de Estado:** Manejo eficiente de flujos de datos para sincronización live.
 * **Dashboard Responsive:** Interfaz adaptable para monitorización desde múltiples dispositivos.
