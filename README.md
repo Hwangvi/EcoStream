@@ -173,7 +173,7 @@ El proyecto combina conceptos de:
 ---
 ## 🎥 Demo del Proyecto
 ¡Haz clic en la imagen para ver cómo funciona el motor de EcoStream en tiempo real!
-](https://youtu.be/4_OAYPGkOo0)
+(https://youtu.be/4_OAYPGkOo0)
 <p align="center">
   <img src="assets/demoMiniatura.png" alt="Arquitectura de EcoStream" width="800">
 </p>
