@@ -136,7 +136,9 @@ docker-compose up --build
 ## 🏗️ Arquitectura del Sistema
 Para entender cómo interactúan los componentes de **EcoStream**, he diseñado el siguiente esquema:
 
-![Arquitectura de EcoStream]()
+<p align="center">
+  <img src="assets/EsquemaEcoStream.png" alt="Arquitectura de EcoStream" width="800">
+</p>
 
 ---
 
@@ -169,9 +171,10 @@ El proyecto combina conceptos de:
 ---
 ## 🎥 Demo del Proyecto
 ¡Haz clic en la imagen para ver cómo funciona el motor de EcoStream en tiempo real!
-
-[![Haz clic para ver la demo de EcoStream](
-)](https://youtu.be/4_OAYPGkOo0)
+](https://youtu.be/4_OAYPGkOo0)
+<p align="center">
+  <img src="assets/demoMiniatura.png" alt="Arquitectura de EcoStream" width="800">
+</p>
 
 *En este video de 3 minutos verás el flujo completo: desde la inyección de telemetría hasta el análisis cognitivo realizado por el agente de IA.*
 
