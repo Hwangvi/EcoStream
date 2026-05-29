@@ -13,7 +13,7 @@ services:
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
 
   backend:
-    build: ./backend  # Como tu Dockerfile está en la raíz, usamos '.'
+    build: ./backend 
     container_name: ecostream_api
     depends_on:
       - postgres_db
