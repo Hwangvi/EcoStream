@@ -133,6 +133,13 @@ docker-compose up --build
 
 ---
 
+## 🏗️ Arquitectura del Sistema
+Para entender cómo interactúan los componentes de **EcoStream**, he diseñado el siguiente esquema:
+
+![Arquitectura de EcoStream]()
+
+---
+
 # 🧠 Objetivo del Proyecto
 
 El propósito de **SmartCity Simulator** es demostrar cómo una arquitectura moderna basada en eventos, streaming de datos, inteligencia artificial y sistemas distribuidos puede utilizarse para construir plataformas de monitorización urbana altamente escalables y resilientes.
@@ -160,6 +167,13 @@ El proyecto combina conceptos de:
 * Integración con Kubernetes para despliegue cloud.
 
 ---
+## 🎥 Demo del Proyecto
+¡Haz clic en la imagen para ver cómo funciona el motor de EcoStream en tiempo real!
+
+[![Haz clic para ver la demo de EcoStream](
+)](https://youtu.be/4_OAYPGkOo0)
+
+*En este video de 3 minutos verás el flujo completo: desde la inyección de telemetría hasta el análisis cognitivo realizado por el agente de IA.*
 
 # 👨‍💻 Autor
 
