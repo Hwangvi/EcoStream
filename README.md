@@ -1,4 +1,4 @@
-# 🏙️ SmartCity Simulator - IoT Monitoring & AI Auditing Platform
+# 🏙️ EcoStream- Simulador de Smart City - Monitoreo de IoT & Auditoria con IA
 
 [![React](https://img.shields.io/badge/React-18%2B-61DAFB?style=for-the-badge\&logo=react\&logoColor=black)](https://react.dev/)
 [![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge\&logo=tailwind-css\&logoColor=white)](https://tailwindcss.com/)
@@ -11,7 +11,7 @@
 
 > **Estado del Proyecto:** 🟢 Plataforma Operativa y Totalmente Dockerizada.
 
-**SmartCity Simulator** es una plataforma Full-Stack de simulación urbana inteligente que replica el comportamiento de una ciudad conectada mediante sensores IoT virtuales.
+**EcoStream** es una plataforma Full-Stack de simulación urbana inteligente que replica el comportamiento de una ciudad conectada mediante sensores IoT virtuales.
 La aplicación permite monitorizar en tiempo real múltiples métricas urbanas, procesar eventos distribuidos mediante streaming y generar auditorías inteligentes impulsadas por IA utilizando **Groq + Llama 3.1**.
 
 El ecosistema integra visualización en vivo, análisis automatizado, generación de reportes PDF y procesamiento de eventos a gran escala bajo una arquitectura desacoplada y orientada a microservicios.
