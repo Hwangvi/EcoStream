@@ -8,7 +8,7 @@ function ListaAlertas({ alertas }) {
   }
 
   return (
-    <div className="max-h-[340px] overflow-y-auto divide-y divide-slate-800/60 scrollbar-thin scrollbar-thumb-slate-800">
+    <div className="max-h-85 overflow-y-auto divide-y divide-slate-800/60 scrollbar-thin scrollbar-thumb-slate-800">
   {alertas.map((alerta) => (
     <div 
       key={alerta.id} 
