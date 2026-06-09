@@ -15,7 +15,7 @@ function App() {
   const dispararAnomalia = async (zona) => {
     const zonaObjetivo = zona === 'TODAS' ? 'CENTRO' : zona
     try {
-      await fetch(`${import.meta.env.VITE_API_URL}/api/alertas/inyectar-anomalia?zona=${zonaObjetivo}`, {
+      await fetch(`/api/alertas/inyectar-anomalia?zona=${zonaObjetivo}`, {
         method: 'POST'
       });
       console.log(`Anomalía inyectada en zona: ${zonaObjetivo}`);
@@ -25,7 +25,7 @@ function App() {
   };
   const limpiarAlertas = async () => {
     try {
-      await fetch(`${import.meta.env.VITE_API_URL}/api/alertas/reset`, { method: 'POST' });
+      await fetch(`/api/alertas/reset`, { method: 'POST' });
       setAlertas([]);
     } catch (err) {
       console.error("Error al limpiar:", err);
@@ -36,8 +36,8 @@ function App() {
     const consultarBackend = async () => {
       try {
         const [resDashboard, resAlertas] = await Promise.all([
-          fetch(`${import.meta.env.VITE_API_URL}/api/dashboard`),
-          fetch(`${import.meta.env.VITE_API_URL}/api/alertas`)
+          fetch(`/api/dashboard`),
+          fetch(`/api/alertas`)
         ])
 
         if (!resDashboard.ok || !resAlertas.ok) throw new Error('Error de conexión')

@@ -8,7 +8,7 @@ function ExportadorPDF() {
 const manejarDescarga = async () => {
   setExportando(true);
   try {
-    const url = `${import.meta.env.VITE_API_URL}/api/alertas/exportar`;
+    const url = `/api/alertas/exportar`;
     const respuesta = await fetch(url);
     
     const respuestaClon = respuesta.clone();
