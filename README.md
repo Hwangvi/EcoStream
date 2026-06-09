@@ -101,6 +101,20 @@ La plataforma incorpora un sistema de auditoría automática basado en inteligen
 
 ---
 
+### 🚀 Despliegue e Infraestructura (Production Ready)
+
+El proyecto se encuentra **desplegado y en producción** sobre infraestructura cloud (**Hetzner**), siguiendo prácticas profesionales de administración de servidores y despliegue continuo:
+
+* **Servidor:** Hosting robusto en Hetzner Cloud.
+* **Orquestación:** Despliegue 100% containerizado mediante **Docker & Docker Compose**, garantizando paridad absoluta entre entornos de desarrollo y producción.
+* **Proxy Inverso:** Implementación de **Nginx** como proxy reverso para la gestión de tráfico, seguridad y enrutamiento eficiente entre microservicios.
+* **Dominio y Seguridad:** Gestión de tráfico a través de **Cloudflare** con dominio propio (`hwangvi.dev`), proporcionando cifrado TLS/SSL extremo a extremo.
+* **Resiliencia:** Configuración de políticas de reinicio automático y persistencia de datos mediante volúmenes Docker, garantizando alta disponibilidad.
+
+> 🌐 **Acceso en vivo:** [https://ecostream.hwangvi.dev](https://ecostream.hwangvi.dev)
+
+---
+
 # 🐳 Infraestructura Dockerizada
 
 Toda la plataforma se encuentra completamente containerizada utilizando Docker y Docker Compose:
