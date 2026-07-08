@@ -1,165 +1,213 @@
 import os
-import psycopg2
-from psycopg2.extras import RealDictCursor, pool
-from dotenv import load_dotenv
-from contextlib import contextmanager
 import sys
+from datetime import datetime, timedelta
+from decimal import Decimal
+from sqlmodel import create_engine, Session, select, func, text, delete
+from dotenv import load_dotenv
+
+from app.domain.models import Barrio, Sensor, Medicion, Alerta
 
 load_dotenv()
 
 REQUIRED_ENV_VARS = ["DB_HOST", "DB_NAME", "DB_USER", "DB_PASSWORD"]
 for var in REQUIRED_ENV_VARS:
     if not os.getenv(var):
-        print(f"❌ ERROR CRÍTICO: La variable de entorno {var} no está definida.")
+        print(f"ERROR CRITICO: La variable de entorno {var} no esta definida.")
         sys.exit(1)
 
-try:
-    db_pool = pool.SimpleConnectionPool(
-        1, 20,
-        host=os.getenv("DB_HOST"),
-        database=os.getenv("DB_NAME"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        port=os.getenv("DB_PORT", "5432")
-    )
-    print("✅ Pool de conexiones a PostgreSQL inicializado correctamente.")
-except Exception as e:
-    print(f"❌ Error al crear el pool de conexiones: {e}")
-    sys.exit(1)
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT", "5432")
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
 
-def get_db_connection():
-    return db_pool.getconn()
+DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-def release_db_connection(conn):
-    db_pool.putconn(conn)
+engine = create_engine(DATABASE_URL, pool_size=10, max_overflow=10, echo=False)
+print("Engine de SQLModel conectado a PostgreSQL.")
 
-@contextmanager
-def db_cursor():
-    conn = get_db_connection()
-    cursor = None
-    try:
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-        yield cursor
-        conn.commit()
-    except Exception as e:
-        conn.rollback()
-        print(f"⚠️ Error en la base de datos: {e}")
-        raise e
-    finally:
-        if cursor:
-            cursor.close()
-        release_db_connection(conn)
+
+def get_session():
+    return Session(engine)
+
 
 class EcoStreamRepository:
-    
+
     @staticmethod
     def obtener_sensor_id(codigo_sensor: str):
-        with db_cursor() as cursor:
-            cursor.execute("SELECT id FROM sensores WHERE codigo_sensor = %s", (codigo_sensor,))
-            sensor = cursor.fetchone()
-            return sensor['id'] if sensor else None
+        with get_session() as session:
+            sensor = session.exec(
+                select(Sensor).where(Sensor.codigo_sensor == codigo_sensor)
+            ).first()
+            return sensor.id if sensor else None
 
     @staticmethod
     def insertar_medicion(sensor_id: int, valor: float):
-        with db_cursor() as cursor:
-            cursor.execute(
-                "INSERT INTO mediciones (sensor_id, valor) VALUES (%s, %s) RETURNING id, fecha_registro",
-                (sensor_id, valor)
-            )
-            return cursor.fetchone()
+        with get_session() as session:
+            medicion = Medicion(sensor_id=sensor_id, valor=Decimal(str(valor)))
+            session.add(medicion)
+            session.commit()
+            session.refresh(medicion)
+            return {"id": medicion.id, "fecha_registro": medicion.fecha_registro}
 
     @staticmethod
     def obtener_ultimas_mediciones():
-        with db_cursor() as cursor:
-            cursor.execute("""
-                SELECT s.codigo_sensor, b.nombre as barrio, s.tipo, s.unidad_medida, m.valor, m.fecha_registro
-                FROM mediciones m
-                JOIN sensores s ON m.sensor_id = s.id
-                JOIN barrios b ON s.barrio_id = b.id
-                WHERE m.fecha_registro IN (
-                    SELECT MAX(fecha_registro) FROM mediciones GROUP BY sensor_id
-                );
-            """)
-            return cursor.fetchall()
-    
+        with get_session() as session:
+            subq = (
+                select(func.max(Medicion.fecha_registro))
+                .group_by(Medicion.sensor_id)
+                .scalar_subquery()
+            )
+            results = session.exec(
+                select(
+                    Sensor.codigo_sensor,
+                    Barrio.nombre.label("barrio"),
+                    Sensor.tipo,
+                    Sensor.unidad_medida,
+                    Medicion.valor,
+                    Medicion.fecha_registro,
+                )
+                .join(Sensor, Medicion.sensor_id == Sensor.id)
+                .join(Barrio, Sensor.barrio_id == Barrio.id)
+                .where(Medicion.fecha_registro.in_(select(subq)))
+            ).all()
+
+            return [
+                {
+                    "codigo_sensor": r.codigo_sensor,
+                    "barrio": r.barrio,
+                    "tipo": r.tipo,
+                    "unidad_medida": r.unidad_medida,
+                    "valor": float(r.valor),
+                    "fecha_registro": str(r.fecha_registro),
+                }
+                for r in results
+            ]
+
     @staticmethod
     def insertar_alerta(sensor_id: int, valor: float, descripcion: str):
-        with db_cursor() as cursor:
-            cursor.execute(
-                "INSERT INTO alertas (sensor_id, valor_disparado, descripcion) VALUES (%s, %s, %s) RETURNING id, fecha_alerta, valor_disparado",
-                (sensor_id, valor, descripcion)
+        with get_session() as session:
+            alerta = Alerta(
+                sensor_id=sensor_id,
+                valor_disparado=Decimal(str(valor)),
+                descripcion=descripcion,
             )
-            return cursor.fetchone()
+            session.add(alerta)
+            session.commit()
+            session.refresh(alerta)
+            return {
+                "id": alerta.id,
+                "fecha_alerta": alerta.fecha_alerta,
+                "valor_disparado": float(alerta.valor_disparado),
+            }
 
     @staticmethod
     def obtener_alertas_recientes():
-        with db_cursor() as cursor:
-            cursor.execute("""
-                SELECT a.id, s.codigo_sensor, a.valor_disparado, a.descripcion, a.fecha_alerta 
-                FROM alertas a
-                JOIN sensores s ON a.sensor_id = s.id
-                ORDER BY a.fecha_alerta DESC LIMIT 10;
-            """)
-            return cursor.fetchall()
+        with get_session() as session:
+            results = session.exec(
+                select(
+                    Alerta.id,
+                    Sensor.codigo_sensor,
+                    Alerta.valor_disparado,
+                    Alerta.descripcion,
+                    Alerta.fecha_alerta,
+                )
+                .join(Sensor, Alerta.sensor_id == Sensor.id)
+                .order_by(Alerta.fecha_alerta.desc())
+                .limit(10)
+            ).all()
+
+            return [
+                {
+                    "id": r.id,
+                    "codigo_sensor": r.codigo_sensor,
+                    "valor_disparado": float(r.valor_disparado),
+                    "descripcion": r.descripcion,
+                    "fecha_alerta": str(r.fecha_alerta),
+                }
+                for r in results
+            ]
 
     @staticmethod
     def obtener_datos_auditoria_unificados(fecha_inicio):
-        query = """
-        SELECT * FROM (
-            SELECT 'MEDICION' as tipo, m.fecha_registro as fecha_evento, s.codigo_sensor, m.valor::DECIMAL(10,2) as valor, 'Promedio operacional' as descripcion
-            FROM mediciones m JOIN sensores s ON m.sensor_id = s.id
-            UNION ALL
-            SELECT 'ALERTA' as tipo, a.fecha_alerta as fecha_evento, s.codigo_sensor, a.valor_disparado::DECIMAL(10,2) as valor, a.descripcion
-            FROM alertas a JOIN sensores s ON a.sensor_id = s.id
-        ) as union_tabla
-        WHERE fecha_evento >= %s
-        ORDER BY fecha_evento DESC;
-        """
-        with db_cursor() as cursor:
-            cursor.execute(query, (fecha_inicio.isoformat(),))
-            return cursor.fetchall()
-    
+        query = text("""
+            SELECT * FROM (
+                SELECT 'MEDICION' as tipo, m.fecha_registro as fecha_evento, s.codigo_sensor, m.valor::DECIMAL(10,2) as valor, 'Promedio operacional' as descripcion
+                FROM mediciones m JOIN sensores s ON m.sensor_id = s.id
+                UNION ALL
+                SELECT 'ALERTA' as tipo, a.fecha_alerta as fecha_evento, s.codigo_sensor, a.valor_disparado::DECIMAL(10,2) as valor, a.descripcion
+                FROM alertas a JOIN sensores s ON a.sensor_id = s.id
+            ) as union_tabla
+            WHERE fecha_evento >= :fecha_inicio
+            ORDER BY fecha_evento DESC
+        """)
+        with get_session() as session:
+            results = session.exec(query, {"fecha_inicio": fecha_inicio.isoformat()}).all()
+            return [dict(r._mapping) for r in results]
+
     @staticmethod
     def exportar_alertas_por_fecha(fecha_inicio):
-        with db_cursor() as cursor:
-            cursor.execute("""
-                SELECT a.id, s.codigo_sensor, a.valor_disparado, a.descripcion, a.fecha_alerta 
-                FROM alertas a
-                JOIN sensores s ON a.sensor_id = s.id
-                WHERE a.fecha_alerta >= %s
-                ORDER BY a.fecha_alerta DESC;
-            """, (fecha_inicio,))
-            return cursor.fetchall()
+        with get_session() as session:
+            results = session.exec(
+                select(
+                    Alerta.id,
+                    Sensor.codigo_sensor,
+                    Alerta.valor_disparado,
+                    Alerta.descripcion,
+                    Alerta.fecha_alerta,
+                )
+                .join(Sensor, Alerta.sensor_id == Sensor.id)
+                .where(Alerta.fecha_alerta >= fecha_inicio)
+                .order_by(Alerta.fecha_alerta.desc())
+            ).all()
+
+            return [
+                {
+                    "id": r.id,
+                    "codigo_sensor": r.codigo_sensor,
+                    "valor_disparado": float(r.valor_disparado),
+                    "descripcion": r.descripcion,
+                    "fecha_alerta": str(r.fecha_alerta),
+                }
+                for r in results
+            ]
 
     @staticmethod
     def limpiar_alertas():
-        with db_cursor() as cursor:
-            cursor.execute("TRUNCATE TABLE alertas RESTART IDENTITY;")
-    
+        with get_session() as session:
+            session.exec(text("TRUNCATE TABLE alertas RESTART IDENTITY"))
+            session.commit()
+
     @staticmethod
     def purgar_datos_antiguos():
-        with db_cursor() as cursor:
-            cursor.execute("DELETE FROM mediciones WHERE fecha_registro < NOW() - INTERVAL '7 days';")
+        with get_session() as session:
+            limite = datetime.now() - timedelta(days=7)
+            session.exec(
+                delete(Medicion).where(Medicion.fecha_registro < limite)
+            )
+            session.commit()
 
     @staticmethod
     def contar_alertas(dias):
-        with db_cursor() as cursor:
-            cursor.execute("SELECT COUNT(*) FROM alertas WHERE fecha_alerta >= NOW() - INTERVAL '%s days';", (dias,))
-            res = cursor.fetchone()
-            return res['count'] if res else 0
+        with get_session() as session:
+            limite = datetime.now() - timedelta(days=dias)
+            count = session.exec(
+                select(func.count()).select_from(Alerta).where(Alerta.fecha_alerta >= limite)
+            ).one()
+            return count or 0
 
     @staticmethod
     def obtener_ultimas_100_filas():
-        query = """
-        SELECT * FROM (
-            SELECT 'MEDICION' as tipo, m.fecha_registro as fecha_evento, s.codigo_sensor, m.valor::DECIMAL(10,2) as valor, 'Promedio operacional' as descripcion
-            FROM mediciones m JOIN sensores s ON m.sensor_id = s.id
-            UNION ALL
-            SELECT 'ALERTA' as tipo, a.fecha_alerta as fecha_evento, s.codigo_sensor, a.valor_disparado::DECIMAL(10,2) as valor, a.descripcion
-            FROM alertas a JOIN sensores s ON a.sensor_id = s.id
-        ) as union_tabla
-        ORDER BY fecha_evento DESC LIMIT 100;
-        """
-        with db_cursor() as cursor:
-            cursor.execute(query)
-            return cursor.fetchall()
+        query = text("""
+            SELECT * FROM (
+                SELECT 'MEDICION' as tipo, m.fecha_registro as fecha_evento, s.codigo_sensor, m.valor::DECIMAL(10,2) as valor, 'Promedio operacional' as descripcion
+                FROM mediciones m JOIN sensores s ON m.sensor_id = s.id
+                UNION ALL
+                SELECT 'ALERTA' as tipo, a.fecha_alerta as fecha_evento, s.codigo_sensor, a.valor_disparado::DECIMAL(10,2) as valor, a.descripcion
+                FROM alertas a JOIN sensores s ON a.sensor_id = s.id
+            ) as union_tabla
+            ORDER BY fecha_evento DESC LIMIT 100
+        """)
+        with get_session() as session:
+            results = session.exec(query).all()
+            return [dict(r._mapping) for r in results]

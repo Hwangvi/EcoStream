@@ -1,10 +1,11 @@
 fastapi
 uvicorn
+sqlmodel
 psycopg2-binary
 redis
-confluent-kafka
+kafka-python
 python-dotenv
 httpx
 pydantic
-groq
+openai
 reportlab

@@ -37,5 +37,4 @@ INSERT INTO sensores (codigo_sensor, tipo, unidad_medida, barrio_id) VALUES
 ('SEN-NORTE-CO2', 'CO2', 'ppm', 2),
 ('SEN-SUR-CO2', 'CO2', 'ppm', 3),
 ('SEN-CENTRO-RUIDO', 'RUIDO', 'dB', 1),
-('SEN-NORTE-TRAFICO', 'TRAFICO', 'vehiculos/min', 2),
-('SEN-SUR-CO2', 'CO2', 'ppm', 3);
+('SEN-NORTE-TRAFICO', 'TRAFICO', 'vehiculos/min', 2);
