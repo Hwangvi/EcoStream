@@ -1,7 +1,6 @@
 import { useState } from 'react'
 
 function ExportadorPDF() { 
-  const [rangoMinutos, setRangoMinutos] = useState('60')
   const [exportando, setExportando] = useState(false)
 
 
