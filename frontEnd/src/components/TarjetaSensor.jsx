@@ -1,15 +1,14 @@
+import PropTypes from 'prop-types'
+import { getColorTipoSensor } from '../constants/zonas'
+import { formatearValor, extraerTipoSensor, extraerZonaSensor } from '../utils/format'
+
 function TarjetaSensor({ sensor }) {
   const { codigo_sensor, valor, unidad_medida } = sensor
 
-  const partes = codigo_sensor.split('-')
-  const zona = partes[1] || 'URBANO'
-  const tipo = partes[2] || 'MÉTRICA'
-  
-  let colorBadge = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-  if (tipo === "RUIDO") colorBadge = "bg-amber-500/10 text-amber-400 border-amber-500/20"
-  if (tipo === "TRAFICO") colorBadge = "bg-blue-500/10 text-blue-400 border-blue-500/20"
-
-  const valorFormateado = isNaN(valor) ? valor : parseFloat(valor).toFixed(1)
+  const zona = extraerZonaSensor(codigo_sensor)
+  const tipo = extraerTipoSensor(codigo_sensor)
+  const colorBadge = getColorTipoSensor(tipo)
+  const valorFormateado = formatearValor(valor)
 
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-5 shadow-sm transition-all duration-200 hover:border-slate-700 hover:bg-slate-900/60">
@@ -45,3 +44,11 @@ function TarjetaSensor({ sensor }) {
 }
 
 export default TarjetaSensor
+
+TarjetaSensor.propTypes = {
+  sensor: PropTypes.shape({
+    codigo_sensor: PropTypes.string.isRequired,
+    valor: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    unidad_medida: PropTypes.string,
+  }).isRequired,
+}

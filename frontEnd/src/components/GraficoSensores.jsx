@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 function GraficoSensores({ datos }) {
@@ -31,3 +32,13 @@ function GraficoSensores({ datos }) {
 }
 
 export default GraficoSensores
+
+GraficoSensores.propTypes = {
+  datos: PropTypes.arrayOf(
+    PropTypes.shape({
+      codigo_sensor: PropTypes.string.isRequired,
+      valor: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+      unidad_medida: PropTypes.string,
+    })
+  ).isRequired,
+}

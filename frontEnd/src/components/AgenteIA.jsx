@@ -1,23 +1,17 @@
+import PropTypes from 'prop-types'
 import { useState } from 'react'
+import { analizarConIA } from '../api/ecoStream'
 
 function AgenteIA({ zonaActual }) {
   const [analisis, setAnalisis] = useState(null)
   const [cargando, setCargando] = useState(false)
 
-  const analizarConIA = async () => {
+  const manejarAnalisis = async () => {
     setCargando(true)
     setAnalisis(null)
 
     try {
-      const response = await fetch(`/api/ia/analizar`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ zona: zonaActual })
-      })
-
-      if (!response.ok) throw new Error('Error en el servidor de IA')
-      
-      const data = await response.json()
+      const data = await analizarConIA(zonaActual)
       setAnalisis({
         diagnostico: data.diagnostico,
         recomendaciones: data.recomendaciones
@@ -44,7 +38,7 @@ function AgenteIA({ zonaActual }) {
         </div>
         
         <button
-          onClick={analizarConIA}
+          onClick={manejarAnalisis}
           disabled={cargando}
           className="rounded bg-sky-500 px-3 py-1.5 font-mono text-xs font-bold text-slate-950 hover:bg-sky-400 transition-all cursor-pointer disabled:opacity-50 shrink-0"
         >
@@ -89,3 +83,7 @@ function AgenteIA({ zonaActual }) {
 }
 
 export default AgenteIA
+
+AgenteIA.propTypes = {
+  zonaActual: PropTypes.string.isRequired,
+}
